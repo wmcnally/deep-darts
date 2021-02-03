@@ -1,0 +1,5 @@
+opencv-python
+yacs
+pandas
+yolov4
+matplotlib
