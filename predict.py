@@ -96,13 +96,15 @@ def predict(
         ASE.append(abs(
             sum(get_dart_scores(pred[:, :2], cfg, numeric=True)) -
             sum(get_dart_scores(gt[:, :2], cfg, numeric=True))))
-    print('MASE: {:.2f}'.format(np.mean(ASE)))
+    ASE = np.array(ASE)
+    print('Percent Correct Score (PSC): {:.1f}%'.format(len(ASE[ASE == 0]) / len(ASE) * 100))
+    print('Mean Absolute Score Error (MASE): {:.2f}'.format(np.mean(ASE)))
 
 
 if __name__ == '__main__':
     from train import build_model
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--cfg', default='default_no_aug_e20')
+    parser.add_argument('-c', '--cfg', default='tiny480_20e')
     parser.add_argument('-d', '--dataset', default='d1')
     parser.add_argument('-s', '--split', default='val')
     args = parser.parse_args()
