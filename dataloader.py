@@ -297,7 +297,6 @@ class data_generator():
 
 if __name__ == '__main__':
 
-
     gpus = tf.config.list_physical_devices('GPU')
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
@@ -319,15 +318,15 @@ if __name__ == '__main__':
         cfg,
         bbox_to_gt_func,
         split='train',
-        return_xy=False,
+        return_xy=True,
         batch_size=1)
 
-    for i, (img, (gt1, gt2)) in enumerate(ds):
-        print(i, img.shape)
-        img = (img.numpy()[0] * 255.).astype(np.uint8)[:, :, [2, 1, 0]]
-        cv2.imshow('', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    # for i, (img, (gt1, gt2)) in enumerate(ds):
+    #     print(i, img.shape)
+    #     img = (img.numpy()[0] * 255.).astype(np.uint8)[:, :, [2, 1, 0]]
+    #     cv2.imshow('', img)
+    #     cv2.waitKey(0)
+    #     cv2.destroyAllWindows()
 
     for img, xy in ds:
         img = img[0]
