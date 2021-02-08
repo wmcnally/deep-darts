@@ -86,7 +86,8 @@ def draw_circles(img, xy, cfg, color=(255, 255, 255)):
 
 
 def transform(xy, img=None, angle=9):
-    c, r = get_circle(xy)
+    c, r = get_circle(xy)  # not necessarily a circle
+    # c is center of 4 calibration points, r is mean distance from center to calibration points
     src_pts = xy[:4].astype(np.float32)
 
     dst_pts = np.array([
@@ -96,6 +97,7 @@ def transform(xy, img=None, angle=9):
         [c[0] + r * np.cos(np.deg2rad(angle)), c[1] - r * np.sin(np.deg2rad(angle))]
     ]).astype(np.float32)
     M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+    # print(M)
     xyz = np.concatenate((xy, np.ones((xy.shape[0], 1))), axis=-1).astype(np.float32)
     xyz_dst = np.matmul(M, xyz.T).T
     xy_dst = xyz_dst[:, :2] / xyz_dst[:, 2:]
@@ -357,15 +359,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     cfg = CN(new_allowed=True)
-    cfg.merge_from_file('../configs/default.yaml')
-
-    # scale = 0.25
-    # imgs = os.listdir(osp.join(cfg.data.path, 'images', args.img_folder))
-    # img_path = osp.join(cfg.data.path, 'images', args.img_folder, imgs[0])
-    # img = cv2.imread(img_path)
-    # img = cv2.resize(img, None, fx=scale, fy=scale)
-    # cv2.imshow('', img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    cfg.merge_from_file('../configs/debug.yaml')
 
     main(cfg, args.img_folder, args.scale, args.draw_circles)
