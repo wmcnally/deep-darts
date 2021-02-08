@@ -335,7 +335,7 @@ if __name__ == '__main__':
         img = (img.numpy() * 255.).astype(np.uint8)[:, :, [2, 1, 0]]
         xy = xy.numpy()
         xy = xy[xy[:, -1] == 1, :2]
-        img = draw(img.copy(), xy, cfg, True, False)
+        img = draw(img.copy(), xy, cfg, False, True)
 
         cv2.imshow('', img)
         cv2.waitKey(0)
