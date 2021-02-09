@@ -74,6 +74,9 @@ def preprocess(path, xy, cfg, bbox_to_gt_func, split='train', return_xy=False):
             ty = np.random.uniform(-1, 1) * jitter
             img, xy = translate(img, xy, tx, ty)
 
+        if cfg.aug.warp_prob and np.random.uniform() < cfg.aug.warp_prob:
+            img, xy = warp_perspective(img, xy, cfg.aug.warp_rho)
+
     if return_xy:
         return img, xy
 
@@ -152,6 +155,37 @@ def translate(img, xy, tx, ty):
     xy[:, 0] += tx/w
     xy[:, 1] += ty/h
     return img, xy
+
+
+def warp_perspective(img, xy, rho):
+    patch_size   = 128
+    top_point    = (32,32)
+    left_point   = (patch_size+32, 32)
+    bottom_point = (patch_size+32, patch_size+32)
+    right_point  = (32, patch_size+32)
+    four_points = [top_point, left_point, bottom_point, right_point]
+    h, w = img.shape[:2]
+
+    perturbed_four_points = []
+    for point in four_points:
+        perturbed_four_points.append((point[0] + np.random.randint(-rho,rho), point[1]+np.random.randint(-rho,rho)))
+
+    H = cv2.getPerspectiveTransform( np.float32(four_points), np.float32(perturbed_four_points) )
+    H_inverse = np.linalg.inv(H)
+
+    warped_image = cv2.warpPerspective(img, H, (img.shape[0], img.shape[1]))
+
+    vis = xy[:, 2:]
+    xy = xy[:, :2] * h
+
+    homogeneous_pts = cv2.convertPointsToHomogeneous(xy)
+    warped_pts = []
+    for i in range(homogeneous_pts.shape[0]):
+        warped_pt = np.expand_dims(np.dot(H, homogeneous_pts[i].T), axis = 0)
+        warped_pt = np.squeeze(cv2.convertPointsFromHomogeneous(warped_pt)) / h
+        warped_pts.append(warped_pt)
+    xy = np.concatenate([np.array(warped_pts), vis], axis=-1)
+    return warped_image, xy
 
 
 # def mixup(image, label, PROBABILITY=1.0):
@@ -297,7 +331,7 @@ class data_generator():
 
 if __name__ == '__main__':
 
-    gpus = tf.config.list_physical_devices('GPU')
+    gpus = tf.config.experimental.list_physical_devices('GPU')
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
 

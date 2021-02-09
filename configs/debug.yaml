@@ -1,7 +1,7 @@
 data:
-  path: '/media/wmcnally/data/darts/'
+  path: '/home/pascale/Documents/dart-detector'
   labels_path: 'dataset/labels.pkl'
-  dataset: 'd1'  # either d1 or d2
+  dataset: 'd2'  # either d1 or d2
 
 board:
   r_board: 0.2255  # radius of full board
@@ -30,6 +30,8 @@ aug:
   jitter_prob: 0
   jitter_max: 0.02  # fraction of input size
   cutout_prob: 0
+  warp_prob: 1
+  warp_rho: 10
 
 model:
   tiny: true
