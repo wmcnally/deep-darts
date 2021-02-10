@@ -158,33 +158,35 @@ def translate(img, xy, tx, ty):
 
 
 def warp_perspective(img, xy, rho):
-    patch_size   = 128
-    top_point    = (32,32)
-    left_point   = (patch_size+32, 32)
+    patch_size = 128
+    top_point = (32,32)
+    left_point = (patch_size+32, 32)
     bottom_point = (patch_size+32, patch_size+32)
-    right_point  = (32, patch_size+32)
+    right_point = (32, patch_size+32)
     four_points = [top_point, left_point, bottom_point, right_point]
     h, w = img.shape[:2]
 
-    perturbed_four_points = []
-    for point in four_points:
-        perturbed_four_points.append((point[0] + np.random.randint(-rho,rho), point[1]+np.random.randint(-rho,rho)))
+    perturbed_four_points = [
+        (p[0] + np.random.uniform(-rho, rho), p[1] + np.random.uniform(-rho, rho))
+        for p in four_points]
 
-    H = cv2.getPerspectiveTransform( np.float32(four_points), np.float32(perturbed_four_points) )
-    H_inverse = np.linalg.inv(H)
+    M = cv2.getPerspectiveTransform(
+        np.float32(four_points),
+        np.float32(perturbed_four_points))
 
-    warped_image = cv2.warpPerspective(img, H, (img.shape[0], img.shape[1]))
+    warped_image = cv2.warpPerspective(img, M, (w, h))
 
     vis = xy[:, 2:]
-    xy = xy[:, :2] * h
+    xy = xy[:, :2]
+    xy *= [[w, h]]
 
-    homogeneous_pts = cv2.convertPointsToHomogeneous(xy)
-    warped_pts = []
-    for i in range(homogeneous_pts.shape[0]):
-        warped_pt = np.expand_dims(np.dot(H, homogeneous_pts[i].T), axis = 0)
-        warped_pt = np.squeeze(cv2.convertPointsFromHomogeneous(warped_pt)) / h
-        warped_pts.append(warped_pt)
-    xy = np.concatenate([np.array(warped_pts), vis], axis=-1)
+    xyz = np.concatenate((xy, np.ones((xy.shape[0], 1))), axis=-1)
+    xyz = np.matmul(M, xyz.T).T
+    xy = xyz[:, :2] / xyz[:, 2:]
+
+    xy /= [[w, h]]
+    xy = np.concatenate([xy, vis], axis=-1)
+
     return warped_image, xy
 
 
