@@ -1,5 +1,5 @@
 opencv-python
 yacs
 pandas
-yolov4
+yolov4==2.0.3
 matplotlib

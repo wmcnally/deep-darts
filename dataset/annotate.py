@@ -1,6 +1,5 @@
 import os
 import os.path as osp
-from dataset.crop import crop_board
 import cv2
 import pandas as pd
 import numpy as np
@@ -12,6 +11,16 @@ BOARD_DICT = {
     0: '13', 1: '4', 2: '18', 3: '1', 4: '20', 5: '5', 6: '12', 7: '9', 8: '14', 9: '11',
     10: '8', 11: '16', 12: '7', 13: '19', 14: '3', 15: '17', 16: '2', 17: '15', 18: '10', 19: '6'
 }
+
+
+def crop_board(img_path, bbox=None, crop_info=(0, 0, 0), crop_pad=1.1):
+    img = cv2.imread(img_path)
+    if bbox is None:
+        x, y, r = crop_info
+        r = int(r * crop_pad)
+        bbox = [y-r, y+r, x-r, x+r]
+    crop = img[bbox[0]:bbox[1], bbox[2]:bbox[3]]
+    return crop, bbox
 
 
 def on_click(event, x, y, flags, param):
@@ -194,13 +203,25 @@ def adjust_xy(idx):
     h, w = img_copy.shape[:2]
     xy[:, 0] *= w; xy[:, 1] *= h
     if key == 52:  # one pixel left
-        xy[idx, 0] -= 1
+        if idx == -1:
+            xy[:, 0] -= 1
+        else:
+            xy[idx, 0] -= 1
     if key == 56:  # one pixel up
-        xy[idx, 1] -= 1
+        if idx == -1:
+            xy[:, 1] -= 1
+        else:
+            xy[idx, 1] -= 1
     if key == 54:  # one pixel right
-        xy[idx, 0] += 1
+        if idx == -1:
+            xy[:, 0] += 1
+        else:
+            xy[idx, 0] += 1
     if key == 50:  # one pixel down
-        xy[idx, 1] += 1
+        if idx == -1:
+            xy[:, 1] += 1
+        else:
+            xy[idx, 1] += 1
     xy[:, 0] /= w; xy[:, 1] /= h
     xy = xy.tolist()
 
@@ -301,6 +322,11 @@ def main(cfg, folder, scale, draw_circles, dart_score=True):
                 i = len(imgs)
                 break
 
+            if key == ord('b'):  # draw new bounding box
+                idx = annot[(annot['img_name'] == a['img_name'])].index.values[0]
+                annot.at[idx, 'bbox'] = get_bounding_box(osp.join(img_dir, a['img_name']), scale)
+                break
+
             if key == ord('.'):
                 i += 1
                 img_copy = crop.copy()
@@ -345,13 +371,15 @@ def main(cfg, folder, scale, draw_circles, dart_score=True):
                 i += 1
                 break
 
-            if key in [ord('1'), ord('2'), ord('3'), ord('4'), ord('5'), ord('6'), ord('7')]:
-                adjust_xy(key - 49)  # ord('1') = 49
+            if key in [ord('1'), ord('2'), ord('3'), ord('4'), ord('5'), ord('6'), ord('7'), ord('0')]:
+                adjust_xy(idx=key - 49)  # ord('1') = 49
                 img_copy = crop.copy()
                 continue
 
 
 if __name__ == '__main__':
+    import sys
+    sys.path.append('../../')
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--img-folder', default='d2_04_05_2020')
     parser.add_argument('-s', '--scale', type=float, default=0.2)

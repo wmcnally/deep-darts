@@ -17,6 +17,7 @@ train:
   batch_size: 32  # per gpu
   lr: 0.001
   bbox_size: 0.025  # fraction of input size
+  loss_type: 'ciou'
   verbose: 1
   save_weights_type: 'tf'
 

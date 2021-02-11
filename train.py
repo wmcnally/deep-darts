@@ -17,6 +17,7 @@ for gpu in gpus:
 
 from yolov4.tf import YOLOv4
 from yolov4.model import yolov4
+from loss import YOLOv4Loss
 
 
 def make_model(
@@ -96,7 +97,11 @@ def train(cfg, strategy):
     with strategy.scope():
         lr = tf.keras.experimental.CosineDecay(cfg.train.lr, cfg.train.epochs * spe)
         optimizer = tf.keras.optimizers.Adam(lr)
-        yolo.compile(optimizer=optimizer, loss_iou_type="ciou", loss_verbose=0)
+        loss = YOLOv4Loss(
+            batch_size=yolo.batch_size,
+            iou_type=cfg.train.loss_type,
+            verbose=cfg.train.loss_verbose)
+        yolo.model.compile(optimizer=optimizer, loss=loss)
 
     hist = yolo.model.fit(
         train_ds,
