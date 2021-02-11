@@ -48,34 +48,35 @@ def preprocess(path, xy, cfg, bbox_to_gt_func, split='train', return_xy=False):
     img = img / 255.  # yolov4 tf convention
 
     if split == 'train':
-        # augmentation
-        if cfg.aug.flip_lr_prob or cfg.aug.flip_ud_prob:
-            img, xy = align_board(img, xy)
+        if np.random.uniform() < cfg.aug.overall_prob:
+            # augmentation
+            if cfg.aug.flip_lr_prob or cfg.aug.flip_ud_prob:
+                img, xy = align_board(img, xy)
 
-        if cfg.aug.flip_lr_prob and np.random.uniform() < cfg.aug.flip_lr_prob:
-            img, xy = flip(img, xy, direction='lr')
+            if cfg.aug.flip_lr_prob and np.random.uniform() < cfg.aug.flip_lr_prob:
+                img, xy = flip(img, xy, direction='lr')
 
-        if cfg.aug.flip_ud_prob and np.random.uniform() < cfg.aug.flip_ud_prob:
-            img, xy = flip(img, xy, direction='ud')
+            if cfg.aug.flip_ud_prob and np.random.uniform() < cfg.aug.flip_ud_prob:
+                img, xy = flip(img, xy, direction='ud')
 
-        if cfg.aug.rot_prob and np.random.uniform() < cfg.aug.rot_prob:
-            angles = np.arange(-180, 180, step=cfg.aug.rot_step)
-            angle = angles[np.random.randint(len(angles))]
-            img, xy = rotate(img, xy, angle, darts_only=True)
+            if cfg.aug.rot_prob and np.random.uniform() < cfg.aug.rot_prob:
+                angles = np.arange(-180, 180, step=cfg.aug.rot_step)
+                angle = angles[np.random.randint(len(angles))]
+                img, xy = rotate(img, xy, angle, darts_only=True)
 
-        if cfg.aug.rot_small_prob and np.random.uniform() < cfg.aug.rot_small_prob:
-            angle = np.random.uniform(-cfg.aug.rot_small_max, cfg.aug.rot_small_max)
-            img, xy = rotate(img, xy, angle, darts_only=False)  # rotate cal points too
+            if cfg.aug.rot_small_prob and np.random.uniform() < cfg.aug.rot_small_prob:
+                angle = np.random.uniform(-cfg.aug.rot_small_max, cfg.aug.rot_small_max)
+                img, xy = rotate(img, xy, angle, darts_only=False)  # rotate cal points too
 
-        if cfg.aug.jitter_prob and np.random.uniform() < cfg.aug.jitter_prob:
-            h, w = img.shape[:2]
-            jitter = cfg.aug.jitter_max * w
-            tx = np.random.uniform(-1, 1) * jitter
-            ty = np.random.uniform(-1, 1) * jitter
-            img, xy = translate(img, xy, tx, ty)
+            if cfg.aug.jitter_prob and np.random.uniform() < cfg.aug.jitter_prob:
+                h, w = img.shape[:2]
+                jitter = cfg.aug.jitter_max * w
+                tx = np.random.uniform(-1, 1) * jitter
+                ty = np.random.uniform(-1, 1) * jitter
+                img, xy = translate(img, xy, tx, ty)
 
-        if cfg.aug.warp_prob and np.random.uniform() < cfg.aug.warp_prob:
-            img, xy = warp_perspective(img, xy, cfg.aug.warp_rho)
+            if cfg.aug.warp_prob and np.random.uniform() < cfg.aug.warp_prob:
+                img, xy = warp_perspective(img, xy, cfg.aug.warp_rho)
 
     if return_xy:
         return img, xy
