@@ -50,19 +50,18 @@ def make_model(
     yolo.model(inputs)
 
 
-def build_model(cfg):
+def build_model(cfg, classes='classes'):
     yolo = YOLOv4(tiny=cfg.model.tiny)
-    yolo.classes = 'classes'
+    yolo.classes = classes
     yolo.input_size = (cfg.model.input_size, cfg.model.input_size)
     yolo.batch_size = cfg.train.batch_size
-    # yolo.make_model()
     make_model(yolo)
     return yolo
 
 
 def train(cfg, strategy):
     img_path = osp.join(cfg.data.path, 'cropped_images', str(cfg.model.input_size))
-    assert osp.exists(img_path)
+    assert osp.exists(img_path), 'Could not find cropped images at {}'.format(img_path)
 
     tf.random.set_seed(cfg.train.seed)
     np.random.seed(cfg.train.seed)
@@ -72,9 +71,12 @@ def train(cfg, strategy):
         yolo = build_model(cfg)
 
     if cfg.model.weights_path:
-        yolo.load_weights(
-            weights_path=cfg.model.weights_path,
-            weights_type=cfg.model.weights_type)
+        if cfg.model.weights_type == 'tf' and cfg.model.weights_path.endswith('.h5'):
+            yolo.model.load_weights(cfg.model.weights_path, by_name=True, skip_mismatch=True)
+        else:
+            yolo.load_weights(
+                weights_path=cfg.model.weights_path,
+                weights_type=cfg.model.weights_type)
 
     yolo_dataset_object = yolo.load_dataset('dummy_dataset.txt', label_smoothing=0.)
     bbox_to_gt_func = yolo_dataset_object.bboxes_to_ground_truth
@@ -92,6 +94,10 @@ def train(cfg, strategy):
         batch_size=cfg.train.batch_size * strategy.num_replicas_in_sync)
 
     n_train = train_ds.__len__()
+    n_val = val_ds.__len__()
+    print('Train samples:', n_train)
+    print('Val samples:', n_val)
+
     spe = int(np.ceil(n_train / (cfg.train.batch_size * strategy.num_replicas_in_sync)))
 
     with strategy.scope():
@@ -103,13 +109,15 @@ def train(cfg, strategy):
             verbose=cfg.train.loss_verbose)
         yolo.model.compile(optimizer=optimizer, loss=loss)
 
+    val_steps = {'d1': 20, 'd2': 8}
+
     hist = yolo.model.fit(
         train_ds,
         epochs=cfg.train.epochs,
         batch_size=cfg.train.batch_size,
         verbose=cfg.train.verbose,
-        validation_data=val_ds,
-        validation_steps=20 // strategy.num_replicas_in_sync,
+        validation_data=None if not cfg.train.val else val_ds,
+        validation_steps=val_steps[cfg.data.dataset] // strategy.num_replicas_in_sync,
         steps_per_epoch=spe)
 
     yolo.save_weights(
@@ -117,6 +125,7 @@ def train(cfg, strategy):
         weights_type=cfg.train.save_weights_type)
 
     pickle.dump(hist.history, open('./models/{}/history.pkl'.format(cfg.model.name), 'wb'))
+    return yolo
 
 
 if __name__ == '__main__':
@@ -129,4 +138,4 @@ if __name__ == '__main__':
     cfg.model.name = args.cfg
 
     tpu, strategy = detect_hardware(tpu_name=None)
-    train(cfg, strategy)
+    yolo = train(cfg, strategy)

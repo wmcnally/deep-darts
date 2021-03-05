@@ -1,12 +1,14 @@
 import argparse
 from yacs.config import CfgNode as CN
 import os.path as osp
+import os
 from dataloader import get_splits
 import cv2
 import numpy as np
 from time import time
-from dataset.annotate import draw, get_dart_scores
-
+from dataset.annotate import draw, get_dart_scores, transform
+import pickle
+import sys
 
 
 def bboxes_to_xy(bboxes, max_darts=3):
@@ -62,7 +64,14 @@ def predict(
         labels_path='./dataset/labels.pkl',
         dataset='d1',
         split='val',
-        max_darts=3):
+        max_darts=3,
+        write=False):
+
+    np.random.seed(0)
+
+    write_dir = osp.join('./models', cfg.model.name, 'preds', split)
+    if write:
+        os.makedirs(write_dir, exist_ok=True)
 
     data = get_splits(labels_path, dataset, split)
     img_prefix = osp.join(cfg.data.path, 'cropped_images', str(cfg.model.input_size))
@@ -76,43 +85,75 @@ def predict(
     xys = xys.astype(np.float32)
 
     preds = np.zeros((len(img_paths), 4 + max_darts, 3))
-    print('Making predictions...')
+    print('Making predictions with {}...'.format(cfg.model.name))
 
     for i, p in enumerate(img_paths):
         if i == 1:
             ti = time()
         img = cv2.imread(p)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
         bboxes = yolo.predict(img)
         preds[i] = bboxes_to_xy(bboxes, max_darts)
-        # img = draw(img, preds[i, :, :2], cfg, circles=True, score=True)
-        # cv2.imshow('/'.join(p.split('/')[-2:]), img[:, :, [2, 1, 0]])
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-    print('FPS: {:.2f}'.format((len(img_paths) - 1) / (time() - ti)))
+
+        if write:
+            write_dir = osp.join('./models', cfg.model.name, 'preds', split, p.split('/')[-2])
+            os.makedirs(write_dir, exist_ok=True)
+            xy = preds[i]
+            xy = xy[xy[:, -1] == 1]
+            img = draw(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), xy[:, :2], cfg, circles=False, score=True)
+            cv2.imwrite(osp.join(write_dir, p.split('/')[-1]), img)
+
+    fps = (len(img_paths) - 1) / (time() - ti)
+    print('FPS: {:.2f}'.format(fps))
 
     ASE = []  # absolute score error
     for pred, gt in zip(preds, xys):
         ASE.append(abs(
             sum(get_dart_scores(pred[:, :2], cfg, numeric=True)) -
             sum(get_dart_scores(gt[:, :2], cfg, numeric=True))))
+
     ASE = np.array(ASE)
-    print('Percent Correct Score (PSC): {:.1f}%'.format(len(ASE[ASE == 0]) / len(ASE) * 100))
-    print('Mean Absolute Score Error (MASE): {:.2f}'.format(np.mean(ASE)))
+    PCS = len(ASE[ASE == 0]) / len(ASE) * 100
+    MASE = np.mean(ASE)
+
+    print('Percent Correct Score (PCS): {:.1f}%'.format(PCS))
+    print('Mean Absolute Score Error (MASE): {:.2f}'.format(MASE))
+
+    results = {
+        'img_paths': img_paths,
+        'preds': preds,
+        'gt': xys,
+        'fps': fps,
+        'ASE': ASE,
+        'PCS': PCS,
+        'MASE': MASE
+    }
+
+    pickle.dump(results, open(osp.join('./models', cfg.model.name, 'results.pkl'), 'wb'))
+    print('Saved results.')
 
 
 if __name__ == '__main__':
     from train import build_model
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--cfg', default='tiny480_20e')
-    parser.add_argument('-d', '--dataset', default='d1')
     parser.add_argument('-s', '--split', default='val')
+    parser.add_argument('-w', '--write', action='store_true')
+    parser.add_argument('-p', '--img-path', default='')
     args = parser.parse_args()
 
     cfg = CN(new_allowed=True)
     cfg.merge_from_file(osp.join('configs', args.cfg + '.yaml'))
+    cfg.model.name = args.cfg
+
+    if args.img_path:
+        cfg.data.path = args.img_path  # override image path in cfg
 
     yolo = build_model(cfg)
     yolo.load_weights(osp.join('models', args.cfg, 'weights'), cfg.model.weights_type)
 
-    predict(yolo, cfg, dataset=args.dataset, split=args.split)
+    predict(yolo, cfg,
+            dataset=cfg.data.dataset,
+            split=args.split,
+            write=args.write)

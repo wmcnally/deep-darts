@@ -24,11 +24,9 @@ def preview(
         yolo,
         cfg,
         labels_path='./dataset/labels.pkl',
-        dataset='d1',
-        split='val',
-):
+        split='val'):
 
-    data = get_splits(labels_path, dataset, split)
+    data = get_splits(labels_path, cfg.data.dataset, split)
     img_prefix = osp.join(cfg.data.path, 'cropped_images', str(cfg.model.input_size))
     img_prefix_large = osp.join(cfg.data.path, 'cropped_images', '800')
     img_paths = [osp.join(img_prefix, folder, name) for (folder, name) in zip(data.img_folder, data.img_name)]
@@ -38,6 +36,7 @@ def preview(
         img = cv2.imread(p)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         bboxes = yolo.predict(img)
+        # img = yolo.draw_bboxes(img, bboxes)
         xy = bboxes_to_xy(bboxes)
         xy = xy[(xy[:, 0] > 0) & (xy[:, 1] > 0)]
 

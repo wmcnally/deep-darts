@@ -21,8 +21,10 @@ train:
   loss_verbose: 0
   verbose: 1
   save_weights_type: 'tf'
+  val: true
 
 aug:
+  overall_prob: 1
   flip_lr_prob: 0
   flip_ud_prob: 0
   rot_prob: 0

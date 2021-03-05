@@ -7,7 +7,6 @@ from tensorflow.keras.losses import BinaryCrossentropy, Loss, Reduction
 class YOLOv4Loss(Loss):
     """
     Patched version of loss to fix potential nan with conf_loss
-    https://github.com/hhk7734/tensorflow-yolov4/blob/master/py_src/yolov4/tf/train.py#L140
     """
 
     def __init__(self, batch_size, iou_type, verbose=0):
@@ -113,11 +112,11 @@ class YOLOv4Loss(Loss):
             ],
         )
 
-        conf_obj_loss = one_obj * (0.0 - backend.log(pred_conf + 1e-7))  # changed eps from 1e-9
+        conf_obj_loss = one_obj * (0.0 - backend.log(pred_conf + backend.epsilon()))  # changed eps from 1e-9
         conf_noobj_loss = (
             one_noobj
             * tf.cast(max_iou < 0.5, dtype=tf.float32)
-            * (0.0 - backend.log(1.0 - pred_conf + 1e-7))  # changed eps from 1e-9
+            * (0.0 - backend.log(1.0 - pred_conf + backend.epsilon()))  # changed eps from 1e-9
         )
         conf_loss = tf.reduce_mean(
             tf.reduce_sum(conf_obj_loss + conf_noobj_loss, axis=(1, 2))

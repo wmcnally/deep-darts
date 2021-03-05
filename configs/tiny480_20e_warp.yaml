@@ -1,7 +1,7 @@
 data:
-  path: '/home/pascale/Documents/dart-detector'
+  path: '/media/wmcnally/data/darts/'
   labels_path: 'dataset/labels.pkl'
-  dataset: 'd2'  # either d1 or d2
+  dataset: 'd1'  # either d1 or d2
 
 board:
   r_board: 0.2255  # radius of full board
@@ -17,10 +17,14 @@ train:
   batch_size: 32  # per gpu
   lr: 0.001
   bbox_size: 0.025  # fraction of input size
+  loss_type: 'ciou'
+  loss_verbose: 0
   verbose: 1
   save_weights_type: 'tf'
+  val: true
 
 aug:
+  overall_prob: 1
   flip_lr_prob: 0
   flip_ud_prob: 0
   rot_prob: 0
@@ -30,8 +34,8 @@ aug:
   jitter_prob: 0
   jitter_max: 0.02  # fraction of input size
   cutout_prob: 0
-  warp_prob: 1
-  warp_rho: 10
+  warp_prob: 0.5
+  warp_gain: 2
 
 model:
   tiny: true

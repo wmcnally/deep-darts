@@ -94,33 +94,51 @@ def draw_circles(img, xy, cfg, color=(255, 255, 255)):
     return img
 
 
-def transform(xy, img=None, angle=9):
-    c, r = get_circle(xy)  # not necessarily a circle
-    # c is center of 4 calibration points, r is mean distance from center to calibration points
-    src_pts = xy[:4].astype(np.float32)
+def transform(xy, img=None, angle=9, M=None):
 
-    dst_pts = np.array([
-        [c[0] - r * np.sin(np.deg2rad(angle)), c[1] - r * np.cos(np.deg2rad(angle))],
-        [c[0] + r * np.sin(np.deg2rad(angle)), c[1] + r * np.cos(np.deg2rad(angle))],
-        [c[0] - r * np.cos(np.deg2rad(angle)), c[1] + r * np.sin(np.deg2rad(angle))],
-        [c[0] + r * np.cos(np.deg2rad(angle)), c[1] - r * np.sin(np.deg2rad(angle))]
-    ]).astype(np.float32)
-    M = cv2.getPerspectiveTransform(src_pts, dst_pts)
-    # print(M)
+    if xy.shape[-1] == 3:
+        has_vis = True
+        vis = xy[:, 2:]
+        xy = xy[:, :2]
+    else:
+        has_vis = False
+
+    if img is not None and np.mean(xy[:4]) < 1:
+        h, w = img.shape[:2]
+        xy *= [[w, h]]
+
+    if M is None:
+        c, r = get_circle(xy)  # not necessarily a circle
+        # c is center of 4 calibration points, r is mean distance from center to calibration points
+
+        src_pts = xy[:4].astype(np.float32)
+        dst_pts = np.array([
+            [c[0] - r * np.sin(np.deg2rad(angle)), c[1] - r * np.cos(np.deg2rad(angle))],
+            [c[0] + r * np.sin(np.deg2rad(angle)), c[1] + r * np.cos(np.deg2rad(angle))],
+            [c[0] - r * np.cos(np.deg2rad(angle)), c[1] + r * np.sin(np.deg2rad(angle))],
+            [c[0] + r * np.cos(np.deg2rad(angle)), c[1] - r * np.sin(np.deg2rad(angle))]
+        ]).astype(np.float32)
+        M = cv2.getPerspectiveTransform(src_pts, dst_pts)
+
     xyz = np.concatenate((xy, np.ones((xy.shape[0], 1))), axis=-1).astype(np.float32)
     xyz_dst = np.matmul(M, xyz.T).T
     xy_dst = xyz_dst[:, :2] / xyz_dst[:, 2:]
+
     if img is not None:
         img = cv2.warpPerspective(img.copy(), M, (img.shape[1], img.shape[0]))
-    return xy_dst, img
+        xy_dst /= [[w, h]]
+
+    if has_vis:
+        xy_dst = np.concatenate([xy_dst, vis], axis=-1)
+
+    return xy_dst, img, M
 
 
 def get_dart_scores(xy, cfg, numeric=False):
-    assert xy.shape[0] > 4, 'xy.shape <= 4'
     valid_cal_pts = xy[:4][(xy[:4, 0] > 0) & (xy[:4, 1] > 0)]
-    if valid_cal_pts.shape[0] < 4:  # missing calibration point
+    if xy.shape[0] <= 4 or valid_cal_pts.shape[0] < 4:  # missing calibration point
         return []
-    xy, _ = transform(xy.copy(), angle=0)
+    xy, _, _ = transform(xy.copy(), angle=0)
     c, r_d = get_circle(xy)
     r_t, r_ob, r_ib, w_dt = board_radii(r_d, cfg)
     xy -= c

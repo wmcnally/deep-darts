@@ -5,17 +5,16 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 import cv2
-from dataset.annotate import draw
+from dataset.annotate import draw, transform
 from yacs.config import CfgNode as CN
-from yolov4.tf import YOLOv4
 from yolov4.tf.dataset import cut_out
 
 
 d1_val = ['02_06_2020', '02_16_2020', '02_22_2020']
 d1_test = ['03_03_2020', '03_19_2020', '03_23_2020', '03_27_2020', '03_28_2020', '03_30_2020', '03_31_2020']
 
-d2_val = ['d2_03_03_2020']
-d2_test = ['d2_03_08_2020']
+d2_val = ['d2_02_03_2021', 'd2_02_05_2021']
+d2_test = ['d2_03_03_2020', 'd2_02_10_2021', 'd2_02_03_2021_2']
 
 
 def get_splits(path='./dataset/labels.pkl', dataset='d1', split='train'):
@@ -47,18 +46,25 @@ def preprocess(path, xy, cfg, bbox_to_gt_func, split='train', return_xy=False):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # yolov4 tf convention
     img = img / 255.  # yolov4 tf convention
 
-    if split == 'train':
-        # augmentation
-        if cfg.aug.flip_lr_prob or cfg.aug.flip_ud_prob:
-            img, xy = align_board(img, xy)
+    if split == 'train' and np.random.uniform() < cfg.aug.overall_prob:
+        transformed = False
 
         if cfg.aug.flip_lr_prob and np.random.uniform() < cfg.aug.flip_lr_prob:
+            if not transformed:
+                xy, img, M = transform(xy, img)
+                transformed = True
             img, xy = flip(img, xy, direction='lr')
 
         if cfg.aug.flip_ud_prob and np.random.uniform() < cfg.aug.flip_ud_prob:
+            if not transformed:
+                xy, img, M = transform(xy, img)
+                transformed = True
             img, xy = flip(img, xy, direction='ud')
 
         if cfg.aug.rot_prob and np.random.uniform() < cfg.aug.rot_prob:
+            if not transformed:
+                xy, img, M = transform(xy, img)
+                transformed = True
             angles = np.arange(-180, 180, step=cfg.aug.rot_step)
             angle = angles[np.random.randint(len(angles))]
             img, xy = rotate(img, xy, angle, darts_only=True)
@@ -75,7 +81,18 @@ def preprocess(path, xy, cfg, bbox_to_gt_func, split='train', return_xy=False):
             img, xy = translate(img, xy, tx, ty)
 
         if cfg.aug.warp_prob and np.random.uniform() < cfg.aug.warp_prob:
-            img, xy = warp_perspective(img, xy, cfg.aug.warp_rho)
+            if not transformed:
+                xy, img, M = transform(xy, img)
+            M_inv = np.linalg.inv(M)
+            M_inv[0, 1:3] *= np.random.uniform(0, cfg.aug.warp_gain, 2)
+            M_inv[1, [0, 2]] *= np.random.uniform(0, cfg.aug.warp_gain, 2)
+            M_inv[2, 0:2] *= np.random.uniform(0, cfg.aug.warp_gain, 2)
+            xy, img, _ = transform(xy, img, M=M_inv)
+
+        else:
+            if transformed:
+                M_inv = np.linalg.inv(M)
+                xy, img, _ = transform(xy, img, M=M_inv)
 
     if return_xy:
         return img, xy
@@ -190,52 +207,20 @@ def warp_perspective(img, xy, rho):
     return warped_image, xy
 
 
-# def mixup(image, label, PROBABILITY=1.0):
-#     """Modified from https://www.kaggle.com/cdeotte/cutmix-and-mixup-on-gpu-tpu"""
-#     # input image - is a batch of images of size [n,dim,dim,3] not a single image of [dim,dim,3]
-#     # output - a batch of images with mixup applied
-#     DIM = IMAGE_SIZE[0]
-#     CLASSES = 104
-#
-#     imgs = [];
-#     labs = []
-#     for j in range(AUG_BATCH):
-#         # DO MIXUP WITH PROBABILITY DEFINED ABOVE
-#         P = tf.cast(tf.random.uniform([], 0, 1) <= PROBABILITY, tf.float32)
-#         # CHOOSE RANDOM
-#         k = tf.cast(tf.random.uniform([], 0, AUG_BATCH), tf.int32)
-#         a = tf.random.uniform([], 0, 1) * P  # this is beta dist with alpha=1.0
-#         # MAKE MIXUP IMAGE
-#         img1 = image[j,]
-#         img2 = image[k,]
-#         imgs.append((1 - a) * img1 + a * img2)
-#         # MAKE CUTMIX LABEL
-#         if len(label.shape) == 1:
-#             lab1 = tf.one_hot(label[j], CLASSES)
-#             lab2 = tf.one_hot(label[k], CLASSES)
-#         else:
-#             lab1 = label[j,]
-#             lab2 = label[k,]
-#         labs.append((1 - a) * lab1 + a * lab2)
-#
-#     # RESHAPE HACK SO TPU COMPILER KNOWS SHAPE OF OUTPUT TENSOR (maybe use Python typing instead?)
-#     image2 = tf.reshape(tf.stack(imgs), (AUG_BATCH, DIM, DIM, 3))
-#     label2 = tf.reshape(tf.stack(labs), (AUG_BATCH, CLASSES))
-#     return image2, label2
-
-
-def get_bounding_boxes(xy, size, e=1e-5):
-    xy = xy[(
-        (xy[:, -1] == 1) &
-        (xy[:, 0] - size / 2 > 0 + e) &
-        (xy[:, 0] + size / 2 < 1 - e) &
-        (xy[:, 1] - size / 2 > 0 + e) &
-        (xy[:, 1] + size / 2 < 1 - e)), :2]
-    # xywhc same format as yolov4 code: [center_x, center_y, w, h, class_id]
-    xywhc = np.zeros((xy.shape[0], 5))
-    xywhc[:, :2] = xy
-    xywhc[:, 2:4] = size
-    xywhc[:4, -1] = list(range(1, 5))  # classes 1 through 4 for calibration points, dart is class 0
+def get_bounding_boxes(xy, size):
+    xy[((xy[:, 0] - size / 2 <= 0) |
+        (xy[:, 0] + size / 2 >= 1) |
+        (xy[:, 1] - size / 2 <= 0) |
+        (xy[:, 1] + size / 2 >= 1)), -1] = 0
+    xywhc = []
+    for i, _xy in enumerate(xy):
+        if i < 4:
+            cls = i + 1
+        else:
+            cls = 0
+        if _xy[-1]:  # is visible
+            xywhc.append([_xy[0], _xy[1], size, size, cls])
+    xywhc = np.array(xywhc)
     return xywhc
 
 
@@ -259,7 +244,8 @@ def load_tfds(
         bbox_to_gt_func,
         split='train',
         return_xy=False,
-        batch_size=32):
+        batch_size=32,
+        debug=False):
 
     data = get_splits(cfg.data.labels_path, cfg.data.dataset, split)
     img_path = osp.join(cfg.data.path, 'cropped_images', str(cfg.model.input_size))
@@ -280,7 +266,7 @@ def load_tfds(
         else:
             dtypes = [tf.float32 for _ in range(4)]
 
-    AUTO = tf.data.experimental.AUTOTUNE
+    AUTO = tf.data.experimental.AUTOTUNE if not debug else 1
     ds = tf.data.Dataset.from_tensor_slices((img_paths, xys))
     ds = ds.shuffle(10000).repeat()
 
@@ -341,7 +327,7 @@ if __name__ == '__main__':
     np.random.seed(0)
 
     cfg = CN(new_allowed=True)
-    cfg.merge_from_file('configs/debug.yaml')
+    cfg.merge_from_file('configs/aug_d2/tiny480_d2_20e_warp.yaml')
 
     from train import build_model
 
@@ -355,23 +341,24 @@ if __name__ == '__main__':
         bbox_to_gt_func,
         split='train',
         return_xy=True,
-        batch_size=1)
+        batch_size=1,
+        debug=True)
 
     # for i, (img, (gt1, gt2)) in enumerate(ds):
     #     print(i, img.shape)
+    #     print(gt1.shape, gt2.shape)
     #     img = (img.numpy()[0] * 255.).astype(np.uint8)[:, :, [2, 1, 0]]
     #     cv2.imshow('', img)
     #     cv2.waitKey(0)
     #     cv2.destroyAllWindows()
 
     for img, xy in ds:
-        img = img[0]
-        xy = xy[0]
+        img = img[0].numpy()
+        xy = xy[0].numpy()
 
-        img = (img.numpy() * 255.).astype(np.uint8)[:, :, [2, 1, 0]]
-        xy = xy.numpy()
+        img = (img * 255.).astype(np.uint8)
         xy = xy[xy[:, -1] == 1, :2]
-        img = draw(img.copy(), xy, cfg, False, True)
+        img = draw(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), xy, cfg, False, True)
 
         cv2.imshow('', img)
         cv2.waitKey(0)

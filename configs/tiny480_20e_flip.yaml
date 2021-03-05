@@ -21,8 +21,10 @@ train:
   loss_verbose: 0
   verbose: 1
   save_weights_type: 'tf'
+  val: true
 
 aug:
+  overall_prob: 1
   flip_lr_prob: 0.5
   flip_ud_prob: 0.5
   rot_prob: 0
@@ -33,7 +35,7 @@ aug:
   jitter_max: 0.02  # fraction of input size
   cutout_prob: 0
   warp_prob: 0
-  warp_rho: 10
+  warp_gain: 2
 
 model:
   tiny: true
