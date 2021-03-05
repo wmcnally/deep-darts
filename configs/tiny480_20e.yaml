@@ -35,7 +35,7 @@ aug:
   jitter_max: 0.02  # fraction of input size
   cutout_prob: 0
   warp_prob: 0
-  warp_rho: 10
+  warp_gain: 2
 
 model:
   tiny: true
