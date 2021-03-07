@@ -38,9 +38,11 @@ def est_cal_pts(xy):
             if missing_idx[0] == 0:
                 xy[0, 0] = -xy[1, 0]
                 xy[0, 1] = -xy[1, 1]
+                xy[0, 2] = 1
             else:
                 xy[1, 0] = -xy[0, 0]
                 xy[1, 1] = -xy[0, 1]
+                xy[1, 2] = 1
             xy[:, :2] += center
         else:
             center = np.mean(xy[:2, :2], axis=0)
@@ -48,9 +50,11 @@ def est_cal_pts(xy):
             if missing_idx[0] == 2:
                 xy[2, 0] = -xy[3, 0]
                 xy[2, 1] = -xy[3, 1]
+                xy[2, 2] = 1
             else:
                 xy[3, 0] = -xy[2, 0]
                 xy[3, 1] = -xy[2, 1]
+                xy[3, 2] = 1
             xy[:, :2] += center
     else:
         # TODO: if len(missing_idx) > 1 (doesn't occur in dataset d1)
@@ -101,8 +105,10 @@ def predict(
             os.makedirs(write_dir, exist_ok=True)
             xy = preds[i]
             xy = xy[xy[:, -1] == 1]
-            img = draw(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), xy[:, :2], cfg, circles=False, score=True)
-            cv2.imwrite(osp.join(write_dir, p.split('/')[-1]), img)
+            error = sum(get_dart_scores(preds[i, :, :2], cfg, numeric=True)) - sum(get_dart_scores(xys[i, :, :2], cfg, numeric=True))
+            if not args.fail_cases or (args.fail_cases and error != 0):
+                img = draw(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), xy[:, :2], cfg, circles=False, score=True)
+                cv2.imwrite(osp.join(write_dir, p.split('/')[-1]), img)
 
     fps = (len(img_paths) - 1) / (time() - ti)
     print('FPS: {:.2f}'.format(fps))
@@ -140,6 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--cfg', default='tiny480_20e')
     parser.add_argument('-s', '--split', default='val')
     parser.add_argument('-w', '--write', action='store_true')
+    parser.add_argument('-f', '--fail-cases', action='store_true')
     parser.add_argument('-p', '--img-path', default='')
     args = parser.parse_args()
 
