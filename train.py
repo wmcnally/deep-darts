@@ -10,6 +10,7 @@ from utils import detect_hardware
 import pickle
 from tensorflow.keras import layers
 import random
+from predict import predict
 
 gpus = tf.config.list_physical_devices('GPU')
 for gpu in gpus:
@@ -71,12 +72,22 @@ def train(cfg, strategy):
         yolo = build_model(cfg)
 
     if cfg.model.weights_path:
-        if cfg.model.weights_type == 'tf' and cfg.model.weights_path.endswith('.h5'):
+        if cfg.model.weights_path.endswith('.h5'):
             yolo.model.load_weights(cfg.model.weights_path, by_name=True, skip_mismatch=True)
         else:
-            yolo.load_weights(
-                weights_path=cfg.model.weights_path,
-                weights_type=cfg.model.weights_type)
+            if 'weights_layers' in cfg.model:
+                pretrained_model = build_model(cfg).model
+                pretrained_model.load_weights(cfg.model.weights_path)
+                for module, pretrained_module in zip(yolo.model.layers, pretrained_model.layers):
+                    for layer, pretrained_layer in zip(module.layers, pretrained_module.layers):
+                        if layer.name in cfg.model.weights_layers:
+                            layer.set_weights(pretrained_layer.get_weights())
+                            print('Transferred pretrained weights to', layer.name)
+                del pretrained_model
+            else:
+                yolo.load_weights(
+                    weights_path=cfg.model.weights_path,
+                    weights_type=cfg.model.weights_type)
 
     yolo_dataset_object = yolo.load_dataset('dummy_dataset.txt', label_smoothing=0.)
     bbox_to_gt_func = yolo_dataset_object.bboxes_to_ground_truth
@@ -139,3 +150,4 @@ if __name__ == '__main__':
 
     tpu, strategy = detect_hardware(tpu_name=None)
     yolo = train(cfg, strategy)
+    predict(yolo, cfg, dataset=cfg.data.dataset, split='val')
