@@ -177,7 +177,7 @@ def get_dart_scores(xy, cfg, numeric=False):
     return scores
 
 
-def draw(img, xy, cfg, circles, score):
+def draw(img, xy, cfg, circles, score, color=(255, 255, 0)):
     xy = np.array(xy)
     if xy.shape[0] > 7:
         xy = xy.reshape((-1, 2))
@@ -194,23 +194,23 @@ def draw(img, xy, cfg, circles, score):
     line_type = 1
     for i, [x, y] in enumerate(xy):
         if i < 4:
-            color = (0, 255, 0)  # green
+            c = (0, 255, 0)  # green
         else:
-            color = (255, 255, 0)  # cyan
+            c = color  # cyan
         x = int(round(x))
         y = int(round(y))
         if i >= 4:
-            cv2.circle(img, (x, y), 1, color, 1)
+            cv2.circle(img, (x, y), 1, c, 1)
             if score:
                 txt = str(scores[i - 4])
             else:
                 txt = str(i + 1)
             cv2.putText(img, txt, (x + 8, y), font,
-                    font_scale, color, line_type)
+                    font_scale, c, line_type)
         else:
-            cv2.circle(img, (x, y), 1, color, 1)
+            cv2.circle(img, (x, y), 1, c, 1)
             cv2.putText(img, str(i + 1), (x + 8, y), font,
-                        font_scale, color, line_type)
+                        font_scale, c, line_type)
     return img
 
 
