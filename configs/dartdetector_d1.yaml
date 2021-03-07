@@ -1,0 +1,48 @@
+data:
+  path: '/media/user/data/darts/'
+  labels_path: 'dataset/labels.pkl'
+  dataset: 'd1'  # either d1 or d2
+
+board:
+  r_board: 0.2255  # radius of full board
+  r_double: 0.170  # center bull to outside double wire edge, in m (BDO standard)
+  r_treble: 0.1074  # center bull to outside treble wire edge, in m (BDO standard)
+  r_outer_bull: 0.0159
+  r_inner_bull: 0.00635
+  w_double_treble: 0.01  # wire apex to apex for double and treble
+
+train:
+  seed: 0
+  epochs: 100
+  batch_size: 16  # per gpu
+  lr: 0.001
+  bbox_size: 0.025  # fraction of input size
+  loss_type: 'ciou'
+  loss_verbose: 0
+  verbose: 1
+  save_weights_type: 'tf'
+  val: true
+
+aug:
+  overall_prob: 0.8
+  flip_lr_prob: 0.5
+  flip_ud_prob: 0.5
+  rot_prob: 0.5
+  rot_step: 36  # degrees
+  rot_small_prob: 0.5
+  rot_small_max: 2  # degrees
+  jitter_prob: 0.5
+  jitter_max: 0.02  # fraction of input size
+  cutout_prob: 0
+  warp_prob: 0
+  warp_rho: 2
+
+model:
+  tiny: true
+  input_size: 800
+  weights_path: 'yolov4-tiny.h5'
+  weights_type: 'tf'
+
+
+
+
