@@ -84,9 +84,9 @@ def preprocess(path, xy, cfg, bbox_to_gt_func, split='train', return_xy=False):
             if not transformed:
                 xy, img, M = transform(xy, img)
             M_inv = np.linalg.inv(M)
-            M_inv[0, 1:3] *= np.random.uniform(0, cfg.aug.warp_gain, 2)
-            M_inv[1, [0, 2]] *= np.random.uniform(0, cfg.aug.warp_gain, 2)
-            M_inv[2, 0:2] *= np.random.uniform(0, cfg.aug.warp_gain, 2)
+            M_inv[0, 1:3] *= np.random.uniform(0, cfg.aug.warp_rho, 2)
+            M_inv[1, [0, 2]] *= np.random.uniform(0, cfg.aug.warp_rho, 2)
+            M_inv[2, 0:2] *= np.random.uniform(0, cfg.aug.warp_rho, 2)
             xy, img, _ = transform(xy, img, M=M_inv)
 
         else:
