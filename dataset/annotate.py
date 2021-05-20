@@ -256,7 +256,7 @@ def add_last_dart(annot, data_path, folder):
     return annot
 
 
-def get_bounding_box(img_path, scale):
+def get_bounding_box(img_path, scale=0.2):
     img = cv2.imread(img_path)
     img_resized = cv2.resize(img, None, fx=scale, fy=scale)
     h, w = img_resized.shape[:2]
@@ -313,7 +313,7 @@ def main(cfg, folder, scale, draw_circles, dart_score=True):
         print('Annotating {}'.format(a['img_name']))
         if a['bbox'] is None:
             if i == 0:
-                bbox = get_bounding_box(osp.join(img_dir, a['img_name']), scale)
+                bbox = get_bounding_box(osp.join(img_dir, a['img_name']))
             if i > 0:
                 last_a = annot.iloc[i-1,:]
                 if last_a['xy'] is not None:
@@ -400,11 +400,11 @@ if __name__ == '__main__':
     sys.path.append('../../')
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--img-folder', default='d2_04_05_2020')
-    parser.add_argument('-s', '--scale', type=float, default=0.2)
-    parser.add_argument('-d', '--draw-circles', type=int, default=1)
+    parser.add_argument('-s', '--scale', type=float, default=0.5)
+    parser.add_argument('-d', '--draw-circles', action='store_true')
     args = parser.parse_args()
 
     cfg = CN(new_allowed=True)
-    cfg.merge_from_file('../configs/debug.yaml')
+    cfg.merge_from_file('../configs/tiny480_20e.yaml')
 
     main(cfg, args.img_folder, args.scale, args.draw_circles)
