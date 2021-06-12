@@ -1,6 +1,6 @@
 # DeepDarts
 
-Code for the CVSports 2021 paper: [DeepDarts: Modeling Keypoints as Objects for Automatic Scorekeeping in Darts using a Single Camera](https://arxiv.org/abs/2105.09880).
+Code for the CVSports 2021 paper: [DeepDarts: Modeling Keypoints as Objects for Automatic Scorekeeping in Darts using a Single Camera](https://arxiv.org/abs/2105.09880)
 
 ## Prerequisites
 Python 3.5-3.8, CUDA >= 10.1, cuDNN >= 7.6
@@ -14,7 +14,7 @@ Python 3.5-3.8, CUDA >= 10.1, cuDNN >= 7.6
    and extract in the ```dataset``` directory. Crop the images: ```$ python crop_images.py --size 800```. This step could
    take a while. Alternatively, you can download the 800x800 cropped images directly from IEEE Dataport. 
    If you choose this option, extract ```cropped_images.zip``` in the ```dataset``` directory.
-8. Download ```models.zip``` from IEEE Dataport and extract in main directory.
+8. Download ```models.zip``` from IEEE Dataport and extract in the main directory.
 
 ## Validation / Testing
 To test the Dataset 1 model:\
@@ -32,7 +32,7 @@ To train the Dataset 1 model:\
 To train the Dataset 2 model:\
 ```$ python train.py --cfg deepdarts_d2```
 
-You may need to adjust the batch sizes to fit your total GPU memory. The default batch sizes are for 24 GB of total GPU memory.
+You may need to adjust the batch sizes to fit your total GPU memory. The default batch sizes are for 24 GB total GPU memory.
 
 ## Sample Test Predictions
 
