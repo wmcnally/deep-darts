@@ -1,6 +1,6 @@
 # DeepDarts
 
-Code for the CVSports 2021 paper: *DeepDarts: Modeling Keypoints as Objects for Automatic Scorekeeping in Darts using a Single Camera*.
+Code for the CVSports 2021 paper: [DeepDarts: Modeling Keypoints as Objects for Automatic Scorekeeping in Darts using a Single Camera](https://arxiv.org/abs/2105.09880).
 
 ## Prerequisites
 Python 3.5-3.8, CUDA >= 10.1, cuDNN >= 7.6
