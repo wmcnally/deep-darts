@@ -1,5 +1,5 @@
 data:
-  path: '/media/user/data/darts/'
+  path: 'dataset/'
   labels_path: 'dataset/labels.pkl'
   dataset: 'd1'  # either d1 or d2
 
@@ -40,7 +40,7 @@ aug:
 model:
   tiny: true
   input_size: 800
-  weights_path: 'yolov4-tiny.h5'
+  weights_path: 'models/yolov4-tiny.h5'
   weights_type: 'tf'
 
 

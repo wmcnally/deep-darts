@@ -6,9 +6,8 @@ from dataloader import get_splits
 import cv2
 import numpy as np
 from time import time
-from dataset.annotate import draw, get_dart_scores, transform
+from dataset.annotate import draw, get_dart_scores
 import pickle
-import sys
 
 
 def bboxes_to_xy(bboxes, max_darts=3):
@@ -57,8 +56,8 @@ def est_cal_pts(xy):
                 xy[3, 2] = 1
             xy[:, :2] += center
     else:
-        # TODO: if len(missing_idx) > 1 (doesn't occur in dataset d1)
-        print(missing_idx)
+        # TODO: if len(missing_idx) > 1
+        print('Missed more than 1 calibration point')
     return xy
 
 
@@ -143,19 +142,15 @@ def predict(
 if __name__ == '__main__':
     from train import build_model
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--cfg', default='tiny480_20e')
+    parser.add_argument('-c', '--cfg', default='deepdarts_d1')
     parser.add_argument('-s', '--split', default='val')
     parser.add_argument('-w', '--write', action='store_true')
     parser.add_argument('-f', '--fail-cases', action='store_true')
-    parser.add_argument('-p', '--img-path', default='')
     args = parser.parse_args()
 
     cfg = CN(new_allowed=True)
     cfg.merge_from_file(osp.join('configs', args.cfg + '.yaml'))
     cfg.model.name = args.cfg
-
-    if args.img_path:
-        cfg.data.path = args.img_path  # override image path in cfg
 
     yolo = build_model(cfg)
     yolo.load_weights(osp.join('models', args.cfg, 'weights'), cfg.model.weights_type)

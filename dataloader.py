@@ -18,14 +18,18 @@ d2_test = ['d2_03_03_2020', 'd2_02_10_2021', 'd2_02_03_2021_2']
 
 
 def get_splits(path='./dataset/labels.pkl', dataset='d1', split='train'):
-    assert dataset in ['d1', 'd2', 'd3'], "dataset must be in ['d1', 'd2']"
+    assert dataset in ['d1', 'd2'], "dataset must be either 'd1' or 'd2'"
     assert split in [None, 'train', 'val', 'test'], "split must be in [None, 'train', 'val', 'test']"
+    if dataset == 'd1':
+        val_folders, test_folders = d1_val, d1_test
+    else:
+        val_folders, test_folders = d2_val, d2_test
     df = pd.read_pickle(path)
     df = df[df.img_folder.str.contains(dataset)]
     splits = {}
-    splits['val'] = df[np.isin(df.img_folder, d2_val)]
-    splits['test'] = df[np.isin(df.img_folder, d2_test)]
-    splits['train'] = df[np.logical_not(np.isin(df.img_folder, d2_val + d2_test))]
+    splits['val'] = df[np.isin(df.img_folder, val_folders)]
+    splits['test'] = df[np.isin(df.img_folder, test_folders)]
+    splits['train'] = df[np.logical_not(np.isin(df.img_folder, val_folders + test_folders))]
     if split is None:
         return splits
     else:

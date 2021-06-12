@@ -1,5 +1,5 @@
 data:
-  path: '/media/user/data/darts/'
+  path: 'dataset/'
   labels_path: 'dataset/labels.pkl'
   dataset: 'd2'  # either d1 or d2
 
@@ -40,7 +40,7 @@ aug:
 model:
   tiny: true
   input_size: 800
-  weights_path: 'models/tiny800_d1/weights'
+  weights_path: 'models/deepdarts_d1/weights'
   weights_type: 'tf'
   weights_layers: [
       'yolo_conv2d',
