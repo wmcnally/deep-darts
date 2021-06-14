@@ -5,7 +5,7 @@ Code for the CVSports 2021 paper: [DeepDarts: Modeling Keypoints as Objects for 
 ## Prerequisites
 Python 3.5-3.8, CUDA >= 10.1, cuDNN >= 7.6
 
-## Getting Started
+## Setup
 1. [Install Anaconda or Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 2. Create a new conda environment with Python 3.7: ```$ conda create -n deep-darts python==3.7```. Activate the environment: ```$ conda activate deep-darts```
 4. Clone this repo: ```$ git clone https://github.com/wmcnally/deep-darts.git```
